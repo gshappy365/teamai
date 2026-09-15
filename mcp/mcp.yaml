@@ -1,0 +1,11 @@
+servers:
+  - name: weknora
+    description: TeamAI knowledge base (WeKnora RAG) - search, chat, and manage knowledge bases, documents and agents
+    transport: stdio
+    command: weknora
+    args: [mcp, serve]
+    env:
+      WEKNORA_HOST: "http://127.0.0.1:18080"
+      WEKNORA_API_KEY: "${WEKNORA_API_KEY}"
+    timeout: 60
+    requires: [weknora]
