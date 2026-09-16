@@ -9,3 +9,11 @@ servers:
       WEKNORA_API_KEY: "${WEKNORA_API_KEY}"
     timeout: 60
     requires: [weknora]
+
+  - name: wigolo
+    description: Local-first web intelligence - search, fetch, crawl, cache, extract, research, diff, and watch web content
+    transport: stdio
+    command: npx
+    args: [-y, wigolo]
+    timeout: 120
+    requires: [wigolo]
