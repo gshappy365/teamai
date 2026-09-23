@@ -1,0 +1,23 @@
+version: 2
+votes:
+  opentag-websocket-silent-hang-与-session-上下文累积-2026-09-20-evyuaj:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-09-23T08:50:20.486Z
+  opentag-wsl-中-codex-代理继承与-computer-离线排障-2026-09-20-6srorc:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-09-23T08:50:20.486Z
+  opentag-qdr-wsl-claude-provider-failed-零凭证-2026-09-19-7xq3kn:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-09-23T08:50:20.486Z
+  opentag-新-agent-provider-failed-全链排障-2026-09-15-pgjzlk:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-09-23T08:50:20.486Z
+  opentag-codex-运行时缺失代理-2026-09-19-yxs0hw:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-09-23T08:50:20.486Z
+deltas: {}
