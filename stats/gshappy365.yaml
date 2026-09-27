@@ -1,5 +1,5 @@
 username: gshappy365
-updatedAt: 2026-09-27T07:31:17.899Z
+updatedAt: 2026-09-27T07:41:07.917Z
 skills:
   show-me:
     count: 35
@@ -58,12 +58,15 @@ skills:
   wizard:
     count: 1
     lastUsed: 2026-09-26T03:53:19.925Z
+  arkcli-helper:
+    count: 1
+    lastUsed: 2026-09-27T07:33:03.081Z
 interventions:
-  sessions: 281
+  sessions: 282
   interrupt: 0
   toolReject: 0
   correction: 11
-prompts: 614
+prompts: 620
 tokens:
   input: 6534015
   output: 938232
@@ -193,8 +196,8 @@ daily:
   2026-09-27:
     sessionsEnded: 8
     sessionsSucceeded: 6
-    promptTurns: 42
-    durationMs: 10716907
+    promptTurns: 47
+    durationMs: 11338249
     sessionsCorrected: 2
     pricedRequests: 0
     costMicros: 0
