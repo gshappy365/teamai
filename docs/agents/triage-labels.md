@@ -1,15 +1,22 @@
 # Triage Labels
 
-The skills speak in terms of five canonical triage roles. This file maps those roles to the actual label strings used in this repo's issue tracker.
+Triage uses two category roles and five state roles. This document maps each canonical role to the label string used in this repository's GitHub issue tracker.
 
-| Label in mattpocock/skills | Label in our tracker | Meaning                                  |
-| -------------------------- | -------------------- | ---------------------------------------- |
-| `needs-triage`             | `needs-triage`       | Maintainer needs to evaluate this issue  |
-| `needs-info`               | `needs-info`         | Waiting on reporter for more information |
-| `ready-for-agent`          | `ready-for-agent`    | Fully specified, ready for an AFK agent  |
-| `ready-for-human`          | `ready-for-human`    | Requires human implementation            |
-| `wontfix`                  | `wontfix`            | Will not be actioned                     |
+## Category labels
 
-When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
+| Role | Label in this repo | Meaning |
+| --- | --- | --- |
+| `bug` | `bug` | Something is broken or not working. |
+| `enhancement` | `enhancement` | A new feature or improvement. |
 
-Edit the right-hand column to match whatever vocabulary you actually use.
+## State labels
+
+| Role | Label in this repo | Meaning |
+| --- | --- | --- |
+| `needs-triage` | `needs-triage` | A maintainer needs to evaluate this issue. |
+| `needs-info` | `needs-info` | Waiting on the reporter to provide more information. |
+| `ready-for-agent` | `ready-for-agent` | Fully specified and ready for an AFK agent. |
+| `ready-for-human` | `ready-for-human` | Requires human implementation. |
+| `wontfix` | `wontfix` | Will not be actioned. |
+
+Every triaged issue should have exactly one category label and exactly one state label. When a skill mentions a role, use the corresponding label string from the tables above. If the tracker's label vocabulary changes, update the mapped label column to match it.
