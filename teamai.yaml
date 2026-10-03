@@ -4,11 +4,21 @@ repo: https://github.com/gshappy365/teamai.git
 provider: github
 sharing:
   rules:
-    enforced: []
+    enforced: [code-review-guide]
   docs:
     localDir: ~/.teamai/docs
   env:
     injectShellProfile: true
+  recall:
+    enabled: true
+  coAuthor:
+    enabled: true
+  contributeHint:
+    enabled: true
+  webhooks:
+    enabled: true
+    endpoints: [] # 待配置：type: json|feishu|wecom, url, events(如 ["*"]), secret(可选)
+usageReport: true
 sources:
   - name: gshappy365
     repo: https://github.com/gshappy365/skills

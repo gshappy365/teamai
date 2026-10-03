@@ -19,15 +19,9 @@ skills:
   diagnosing-bugs:
     count: 2
     lastUsed: 2026-09-25T02:47:14.088Z
-  playwriter:
-    count: 1
-    lastUsed: 2026-09-19T02:54:25.698Z
   wigolo-cache:
     count: 1
     lastUsed: 2026-09-20T06:39:05.509Z
-  home:
-    count: 1
-    lastUsed: 2026-09-19T03:58:19.334Z
 interventions:
   sessions: 47
   interrupt: 0
