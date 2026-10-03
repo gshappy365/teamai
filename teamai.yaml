@@ -9,3 +9,6 @@ sharing:
     localDir: ~/.teamai/docs
   env:
     injectShellProfile: true
+sources:
+  - name: gshappy365
+    repo: https://github.com/gshappy365/skills
