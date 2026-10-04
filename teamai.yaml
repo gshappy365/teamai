@@ -22,3 +22,5 @@ usageReport: false
 sources:
   - name: gshappy365
     repo: https://github.com/gshappy365/skills
+  - name: pstack
+    repo: gshappy365/pstack
