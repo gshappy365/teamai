@@ -18,7 +18,7 @@ sharing:
   webhooks:
     enabled: true
     endpoints: [] # 待配置：type: json|feishu|wecom, url, events(如 ["*"]), secret(可选)
-usageReport: true
+usageReport: false
 sources:
   - name: gshappy365
     repo: https://github.com/gshappy365/skills
