@@ -4,7 +4,8 @@ repo: https://github.com/gshappy365/teamai.git
 provider: github
 sharing:
   rules:
-    enforced: [code-review-guide]
+    enforced:
+      - code-review-guide
   docs:
     localDir: ~/.teamai/docs
   env:
@@ -17,8 +18,10 @@ sharing:
     enabled: true
   webhooks:
     enabled: true
-    endpoints: [] # 待配置：type: json|feishu|wecom, url, events(如 ["*"]), secret(可选)
+    endpoints: []
 usageReport: false
 sources:
   - name: gshappy365
     repo: https://github.com/gshappy365/skills
+  - name: pstack
+    repo: gshappy365/pstack
