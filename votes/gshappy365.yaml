@@ -64,4 +64,14 @@ votes:
     recalled_count: 1
     upvoted_count: 0
     last_recalled_at: 2026-10-10T07:46:31.229Z
+  prototype:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-11-01T10:07:44.530Z
+  agents/issue-tracker:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-11-01T10:07:44.530Z
 deltas: {}
+deliveredSyncIds:
+  - c05c86ae-3b06-4263-8090-a00dd7366476
