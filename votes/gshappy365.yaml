@@ -9,9 +9,9 @@ votes:
     upvoted_count: 0
     last_recalled_at: 2026-09-23T08:50:20.486Z
   opentag-qdr-wsl-claude-provider-failed-零凭证-2026-09-19-7xq3kn:
-    recalled_count: 1
+    recalled_count: 2
     upvoted_count: 0
-    last_recalled_at: 2026-09-23T08:50:20.486Z
+    last_recalled_at: 2026-11-03T08:15:35.279Z
   opentag-新-agent-provider-failed-全链排障-2026-09-15-pgjzlk:
     recalled_count: 1
     upvoted_count: 0
@@ -76,7 +76,20 @@ votes:
     recalled_count: 1
     upvoted_count: 0
     last_recalled_at: 2026-11-02T08:51:00.706Z
+  setup-matt-pocock-skills:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-11-03T08:15:35.279Z
+  setup-pre-commit:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-11-03T08:15:35.279Z
+  setup-ts-deep-modules:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-11-03T08:15:35.279Z
 deltas: {}
 deliveredSyncIds:
   - c05c86ae-3b06-4263-8090-a00dd7366476
   - c67c069f-67e9-46e5-93eb-0a1378344017
+  - 7f79e1cc-fe2e-418c-9069-3e8dd7cc72c1
