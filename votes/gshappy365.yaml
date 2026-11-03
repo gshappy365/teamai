@@ -61,9 +61,9 @@ votes:
     upvoted_count: 0
     last_recalled_at: 2026-10-10T07:46:31.229Z
   session-notes-2026-10-10-7bffcp:
-    recalled_count: 1
+    recalled_count: 2
     upvoted_count: 0
-    last_recalled_at: 2026-10-10T07:46:31.229Z
+    last_recalled_at: 2026-11-02T08:51:00.706Z
   prototype:
     recalled_count: 1
     upvoted_count: 0
@@ -72,6 +72,11 @@ votes:
     recalled_count: 1
     upvoted_count: 0
     last_recalled_at: 2026-11-01T10:07:44.530Z
+  wigolo-mcp-map:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-11-02T08:51:00.706Z
 deltas: {}
 deliveredSyncIds:
   - c05c86ae-3b06-4263-8090-a00dd7366476
+  - c67c069f-67e9-46e5-93eb-0a1378344017
