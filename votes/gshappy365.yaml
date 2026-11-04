@@ -49,9 +49,9 @@ votes:
     upvoted_count: 0
     last_recalled_at: 2026-10-10T07:46:31.229Z
   WSL2 Ubuntu 整机精简备份与迁移到新发行版实战:
-    recalled_count: 1
+    recalled_count: 2
     upvoted_count: 0
-    last_recalled_at: 2026-09-27T06:39:18.350Z
+    last_recalled_at: 2026-11-03T23:57:47.722Z
   teamai-contribute-网络失败后的重试处理-2026-09-15-s86iph:
     recalled_count: 1
     upvoted_count: 0
@@ -61,9 +61,9 @@ votes:
     upvoted_count: 0
     last_recalled_at: 2026-10-10T07:46:31.229Z
   session-notes-2026-10-10-7bffcp:
-    recalled_count: 2
+    recalled_count: 3
     upvoted_count: 0
-    last_recalled_at: 2026-11-02T08:51:00.706Z
+    last_recalled_at: 2026-11-03T23:57:47.722Z
   prototype:
     recalled_count: 1
     upvoted_count: 0
@@ -73,9 +73,9 @@ votes:
     upvoted_count: 0
     last_recalled_at: 2026-11-01T10:07:44.530Z
   wigolo-mcp-map:
-    recalled_count: 1
+    recalled_count: 2
     upvoted_count: 0
-    last_recalled_at: 2026-11-02T08:51:00.706Z
+    last_recalled_at: 2026-11-03T23:57:47.722Z
   setup-matt-pocock-skills:
     recalled_count: 1
     upvoted_count: 0
@@ -88,8 +88,13 @@ votes:
     recalled_count: 1
     upvoted_count: 0
     last_recalled_at: 2026-11-03T08:15:35.279Z
+  adr/0001-迁移到-teamai-cli-user-scope:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-11-03T23:57:47.722Z
 deltas: {}
 deliveredSyncIds:
   - c05c86ae-3b06-4263-8090-a00dd7366476
   - c67c069f-67e9-46e5-93eb-0a1378344017
   - 7f79e1cc-fe2e-418c-9069-3e8dd7cc72c1
+  - 66726a55-7e47-4c18-9a44-1a21b85ca7c5
