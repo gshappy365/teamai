@@ -1,25 +1,28 @@
 version: 2
 votes:
   opentag-websocket-silent-hang-与-session-上下文累积-2026-09-20-evyuaj:
-    recalled_count: 5
+    recalled_count: 6
     upvoted_count: 0
-    last_recalled_at: 2026-11-12T06:18:58.195Z
+    last_recalled_at: 2026-11-12T07:35:04.339Z
+    recalled_session_count: 6
   opentag-wsl-中-codex-代理继承与-computer-离线排障-2026-09-20-6srorc:
-    recalled_count: 1
-    upvoted_count: 0
-    last_recalled_at: 2026-09-23T08:50:20.486Z
-  opentag-qdr-wsl-claude-provider-failed-零凭证-2026-09-19-7xq3kn:
-    recalled_count: 3
-    upvoted_count: 0
-    last_recalled_at: 2026-11-12T06:18:58.195Z
-  opentag-新-agent-provider-failed-全链排障-2026-09-15-pgjzlk:
     recalled_count: 2
     upvoted_count: 0
-    last_recalled_at: 2026-11-12T06:18:58.195Z
-  opentag-codex-运行时缺失代理-2026-09-19-yxs0hw:
-    recalled_count: 1
+    last_recalled_at: 2026-11-12T07:35:04.339Z
+  opentag-qdr-wsl-claude-provider-failed-零凭证-2026-09-19-7xq3kn:
+    recalled_count: 4
     upvoted_count: 0
-    last_recalled_at: 2026-09-23T08:50:20.486Z
+    last_recalled_at: 2026-11-12T07:35:04.339Z
+    recalled_session_count: 4
+  opentag-新-agent-provider-failed-全链排障-2026-09-15-pgjzlk:
+    recalled_count: 3
+    upvoted_count: 0
+    last_recalled_at: 2026-11-12T07:35:04.339Z
+    recalled_session_count: 3
+  opentag-codex-运行时缺失代理-2026-09-19-yxs0hw:
+    recalled_count: 2
+    upvoted_count: 0
+    last_recalled_at: 2026-11-12T07:35:04.339Z
   first-tree-与-teamai-的分层协同及-context-tree-seed-修复-2026-09-27-2w6ccn:
     recalled_count: 6
     upvoted_count: 0
@@ -40,6 +43,7 @@ votes:
     recalled_count: 2
     upvoted_count: 0
     last_recalled_at: 2026-11-12T06:18:58.195Z
+    recalled_session_count: 3
   定位-teamai-内置技能并核对经验贡献分支-2026-09-27-q3vljx:
     recalled_count: 2
     upvoted_count: 0
@@ -64,6 +68,7 @@ votes:
     recalled_count: 4
     upvoted_count: 0
     last_recalled_at: 2026-11-12T06:02:19.424Z
+    recalled_session_count: 5
   prototype:
     recalled_count: 1
     upvoted_count: 0
@@ -76,6 +81,7 @@ votes:
     recalled_count: 3
     upvoted_count: 0
     last_recalled_at: 2026-11-12T06:02:19.424Z
+    recalled_session_count: 4
   setup-matt-pocock-skills:
     recalled_count: 1
     upvoted_count: 0
@@ -112,6 +118,7 @@ votes:
     recalled_count: 1
     upvoted_count: 0
     last_recalled_at: 2026-11-12T06:18:58.195Z
+    recalled_session_count: 2
 deltas: {}
 deliveredSyncIds:
   - c05c86ae-3b06-4263-8090-a00dd7366476
@@ -119,3 +126,4 @@ deliveredSyncIds:
   - 7f79e1cc-fe2e-418c-9069-3e8dd7cc72c1
   - 66726a55-7e47-4c18-9a44-1a21b85ca7c5
   - 432c79a4-29bc-440f-bdef-dd95574ebdf2
+  - a1b24d2b-d968-42ec-ad47-c3d112c2d6ac
