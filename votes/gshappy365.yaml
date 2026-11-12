@@ -1,21 +1,21 @@
 version: 2
 votes:
   opentag-websocket-silent-hang-与-session-上下文累积-2026-09-20-evyuaj:
-    recalled_count: 3
+    recalled_count: 5
     upvoted_count: 0
-    last_recalled_at: 2026-09-27T06:39:59.482Z
+    last_recalled_at: 2026-11-12T06:18:58.195Z
   opentag-wsl-中-codex-代理继承与-computer-离线排障-2026-09-20-6srorc:
     recalled_count: 1
     upvoted_count: 0
     last_recalled_at: 2026-09-23T08:50:20.486Z
   opentag-qdr-wsl-claude-provider-failed-零凭证-2026-09-19-7xq3kn:
+    recalled_count: 3
+    upvoted_count: 0
+    last_recalled_at: 2026-11-12T06:18:58.195Z
+  opentag-新-agent-provider-failed-全链排障-2026-09-15-pgjzlk:
     recalled_count: 2
     upvoted_count: 0
-    last_recalled_at: 2026-11-03T08:15:35.279Z
-  opentag-新-agent-provider-failed-全链排障-2026-09-15-pgjzlk:
-    recalled_count: 1
-    upvoted_count: 0
-    last_recalled_at: 2026-09-23T08:50:20.486Z
+    last_recalled_at: 2026-11-12T06:18:58.195Z
   opentag-codex-运行时缺失代理-2026-09-19-yxs0hw:
     recalled_count: 1
     upvoted_count: 0
@@ -37,13 +37,13 @@ votes:
     upvoted_count: 0
     last_recalled_at: 2026-09-27T03:48:30.920Z
   teamai-contribute工作流:
-    recalled_count: 1
+    recalled_count: 2
     upvoted_count: 0
-    last_recalled_at: 2026-09-27T03:48:30.920Z
+    last_recalled_at: 2026-11-12T06:18:58.195Z
   定位-teamai-内置技能并核对经验贡献分支-2026-09-27-q3vljx:
-    recalled_count: 1
+    recalled_count: 2
     upvoted_count: 0
-    last_recalled_at: 2026-09-27T04:00:21.090Z
+    last_recalled_at: 2026-11-06T08:51:21.276Z
   context-tree-seed-phase-1-的-pr-发布与自动审查边界-2026-09-27-649smg:
     recalled_count: 4
     upvoted_count: 0
@@ -61,9 +61,9 @@ votes:
     upvoted_count: 0
     last_recalled_at: 2026-10-10T07:46:31.229Z
   session-notes-2026-10-10-7bffcp:
-    recalled_count: 3
+    recalled_count: 4
     upvoted_count: 0
-    last_recalled_at: 2026-11-03T23:57:47.722Z
+    last_recalled_at: 2026-11-12T06:02:19.424Z
   prototype:
     recalled_count: 1
     upvoted_count: 0
@@ -73,9 +73,9 @@ votes:
     upvoted_count: 0
     last_recalled_at: 2026-11-01T10:07:44.530Z
   wigolo-mcp-map:
-    recalled_count: 2
+    recalled_count: 3
     upvoted_count: 0
-    last_recalled_at: 2026-11-03T23:57:47.722Z
+    last_recalled_at: 2026-11-12T06:02:19.424Z
   setup-matt-pocock-skills:
     recalled_count: 1
     upvoted_count: 0
@@ -92,9 +92,30 @@ votes:
     recalled_count: 1
     upvoted_count: 0
     last_recalled_at: 2026-11-03T23:57:47.722Z
+  show-me:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-11-06T08:51:21.276Z
+  answer-me-with-html:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-11-06T08:51:21.276Z
+  grill-me:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-11-06T08:51:21.276Z
+  loop-me:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-11-06T08:51:21.276Z
+  session-notes-2026-09-15-832k48:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-11-12T06:18:58.195Z
 deltas: {}
 deliveredSyncIds:
   - c05c86ae-3b06-4263-8090-a00dd7366476
   - c67c069f-67e9-46e5-93eb-0a1378344017
   - 7f79e1cc-fe2e-418c-9069-3e8dd7cc72c1
   - 66726a55-7e47-4c18-9a44-1a21b85ca7c5
+  - 432c79a4-29bc-440f-bdef-dd95574ebdf2
