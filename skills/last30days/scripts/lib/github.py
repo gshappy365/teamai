@@ -166,10 +166,31 @@ def _compute_relevance(
     return round(relevance, 2)
 
 
+# Issue search matches body text, so an off-topic query still returns a full
+# page: keyword-stuffed spam issues and passing mentions in unrelated repos.
+# Their search rank is as good as a real hit's, so the blended score above
+# cannot separate them. A keyword result is kept only when its title names the
+# topic or its repo is named for it. 0.25 sits just above the 0.24 cap that
+# token_overlap_relevance gives a match on generic words alone.
+TOPICAL_FLOOR = 0.25
+
+
+def _clears_topical_floor(topic: str, title: str, repo: str) -> bool:
+    """True when a keyword-search result is about ``topic``.
+
+    Rank and engagement play no part. Person and project modes never call this.
+    """
+    repo_words = re.sub(r"[/_.\-]+", " ", repo)
+    return max(
+        token_overlap_relevance(topic, title),
+        token_overlap_relevance(topic, repo_words),
+    ) >= TOPICAL_FLOOR
+
+
 # GitHub search qualifiers the planner sometimes writes straight into the topic
 # string (e.g. "open source AI stars:>1000 created:>2025-03-20"). They must not
 # reach the query builder in `search_github`: it appends its own
-# `created:>{from_date}`, and when two `created:` qualifiers collide GitHub
+# `created:{from_date}..{to_date}`, and when two `created:` qualifiers collide GitHub
 # honours the FIRST and silently ignores ours. The API then returns
 # out-of-window items that `parse_github_response`'s date filter drops
 # wholesale — a source that fetches results and reports zero (issue #949).
@@ -179,7 +200,7 @@ def _compute_relevance(
 # the qualifier so no stray `()`/`""` residue reaches the query (issue #952).
 # The plain regex's boundary also accepts wrapper openers so a qualifier with
 # a missing closer ("(created:>2025-03-20") is still stripped rather than
-# leaking into the query; only the stray opener survives, harmlessly.
+# leaking into the query; qualifier-only wrapper residue is discarded below.
 QUALIFIER_KEYS = frozenset({
     "archived", "assignee", "author", "base", "closed", "comments", "commenter",
     "created", "fork", "forks", "head", "in", "interactions", "involves", "is",
@@ -220,6 +241,11 @@ def strip_search_qualifiers(text: str) -> str:
     """
     stripped = _WRAPPED_QUALIFIER_RE.sub(" ", text)
     stripped = _QUALIFIER_RE.sub(" ", stripped)
+    # Malformed/nested wrappers can leave only punctuation after a qualifier
+    # is removed (#969). There is no subject to search in that case. Keep
+    # wrappers around actual topic text, including unbalanced ones like "ai (foo".
+    if stripped != text and re.fullmatch(r"[\s()\[\]\"']*", stripped):
+        return ""
     while True:
         cleaned = _EMPTY_WRAPPER_RE.sub("", stripped)
         if cleaned == stripped:
@@ -296,7 +322,7 @@ def search_github(
     _log(f"Searching for '{core}' (raw: '{topic}', since {from_date}, count={count})")
 
     # Build search query with date filter
-    base_q = f"{core} created:>{from_date}"
+    base_q = f"{core} created:{from_date}..{to_date}"
 
     def _search(qualifier: Optional[str]) -> Optional[Dict[str, Any]]:
         q = f"{base_q} {qualifier}" if qualifier else base_q
@@ -386,11 +412,18 @@ def search_github(
     return envelope
 
 
-def parse_github_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+def parse_github_response(
+    response: Dict[str, Any],
+    topic: Optional[str] = None,
+) -> List[Dict[str, Any]]:
     """Normalize a ``search_github`` envelope into the skill's item shape.
 
-    Pure function: no I/O, no token, no enrichment. Applies the date
-    filter using the search context and sorts by relevance.
+    Pure function: no I/O, no token, no enrichment. Drops results that are
+    not about the topic, applies the date filter using the search context and
+    sorts by relevance.
+
+    ``topic`` is the research topic the results are judged against. It
+    defaults to the subject the search ran on.
     """
     if not isinstance(response, dict):
         return []
@@ -402,12 +435,17 @@ def parse_github_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
     from_date = context.get("from_date") or ""
     to_date = context.get("to_date") or ""
     count = context.get("count") or DEPTH_LIMITS["default"]
+    floor_topic = strip_search_qualifiers(extract_core_subject(topic or "")) or core
 
     items: List[Dict[str, Any]] = []
+    off_topic = 0
     for i, item in enumerate(raw_items[:count]):
         html_url = item.get("html_url", "")
         repo = _parse_repo_from_url(html_url)
         title = item.get("title", "")
+        if not _clears_topical_floor(floor_topic, title, repo):
+            off_topic += 1
+            continue
         body_text = item.get("body") or ""
         reactions_total = item.get("reactions", {}).get("total_count", 0) if isinstance(item.get("reactions"), dict) else 0
         comment_count = item.get("comments") or 0
@@ -445,6 +483,12 @@ def parse_github_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "is_pr": is_pr,
             },
         })
+
+    if off_topic:
+        _log(
+            f"Dropped {off_topic} of {off_topic + len(items)} results not about "
+            f"'{_truncate_diagnostic(floor_topic)}'"
+        )
 
     # Date filter
     if from_date and to_date:
@@ -750,8 +794,8 @@ def search_github_person(
     _log(f"Person-mode search for @{username} (since {from_date})")
 
     # Phase 1: PR velocity via search API
-    total_q = urllib.parse.quote(f"author:{username} type:pr created:>{from_date}")
-    merged_q = urllib.parse.quote(f"author:{username} type:pr is:merged created:>{from_date}")
+    total_q = urllib.parse.quote(f"author:{username} type:pr created:{from_date}..{to_date}")
+    merged_q = urllib.parse.quote(f"author:{username} type:pr is:merged created:{from_date}..{to_date}")
 
     total_url = f"{SEARCH_URL}?q={total_q}&per_page=1"
     merged_url = f"{SEARCH_URL}?q={merged_q}&sort=reactions&order=desc&per_page=100"
@@ -823,7 +867,7 @@ def search_github_person(
     num_repos = len(repo_pr_counts)
     velocity_text = (
         f"GitHub Person Profile: @{username}\n\n"
-        f"CONTRIBUTION VELOCITY (last {(to_date > from_date) and 30 or 30} days)\n"
+        f"CONTRIBUTION VELOCITY (last {dates.days_ago(from_date, to_date)} days)\n"
         f"- {merged_count} PRs merged across {num_repos} repos ({merge_rate}% merge rate)\n"
         f"- {total_prs} total PRs submitted, {open_prs} still open\n"
     )
@@ -841,7 +885,7 @@ def search_github_person(
         "snippet": velocity_text,
         "relevance": 0.95,
         "why_relevant": f"GitHub profile: @{username} - {merged_count} PRs merged across {num_repos} repos",
-        "engagement": {"merged_prs": merged_count, "comments": total_prs},
+        "engagement": {"merged_prs": merged_count, "total_prs": total_prs},
         "metadata": {
             "labels": ["person-profile", "velocity"],
             "state": "open",
@@ -902,11 +946,11 @@ def search_github_person(
                 "snippet": "\n".join(snippet_parts),
                 "relevance": min(0.9, 0.6 + math.log1p(stars) / 30 + min(0.15, pr_count / 20)),
                 "why_relevant": f"GitHub contribution: {pr_count} PRs merged to {repo} ({stars_str} stars)",
-                "engagement": {"stars": stars, "comments": pr_count},
+                "engagement": {"stars": stars, "contributed_prs": pr_count},
                 "metadata": {
                     "labels": ["person-profile", "external-repo"],
                     "state": "open",
-                    "comment_count": pr_count,
+                    "comment_count": 0,
                     "reactions": stars,
                     "is_pr": False,
                     "date_is_snapshot": not _has_in_window_release(releases, from_date, to_date),
@@ -961,11 +1005,11 @@ def search_github_person(
                 "snippet": "\n".join(snippet_parts),
                 "relevance": min(0.95, 0.7 + math.log1p(stars) / 25),
                 "why_relevant": f"GitHub own project: {repo_name} ({stars_str} stars)",
-                "engagement": {"stars": stars, "comments": open_issues},
+                "engagement": {"stars": stars, "open_issues": open_issues},
                 "metadata": {
                     "labels": ["person-profile", "own-repo"],
                     "state": "open",
-                    "comment_count": open_issues,
+                    "comment_count": 0,
                     "reactions": stars,
                     "is_pr": False,
                     "date_is_snapshot": not _has_in_window_release(releases, from_date, to_date),
@@ -1124,11 +1168,11 @@ def _person_recent_pushes(
                 f"GitHub activity: @{repo['actor']} pushed {name} on {repo['pushed']} "
                 f"({stars_str} stars)"
             ),
-            "engagement": {"stars": stars, "comments": open_issues},
+            "engagement": {"stars": stars, "open_issues": open_issues},
             "metadata": {
                 "labels": ["person-profile", "recent-push"],
                 "state": "open",
-                "comment_count": open_issues,
+                "comment_count": 0,
                 "reactions": stars,
                 "is_pr": False,
                 "event_type": "PushEvent",
@@ -1266,11 +1310,11 @@ def search_github_project(
                 "snippet": "\n".join(snippet_parts),
                 "relevance": min(0.95, 0.7 + math.log1p(stars) / 25),
                 "why_relevant": f"GitHub project: {repo} ({stars_str} stars, live)",
-                "engagement": {"stars": stars, "comments": open_issues},
+                "engagement": {"stars": stars, "open_issues": open_issues},
                 "metadata": {
                     "labels": ["project-mode"],
                     "state": "open",
-                    "comment_count": open_issues,
+                    "comment_count": 0,
                     "reactions": stars,
                     "is_pr": False,
                     "date_is_snapshot": not _has_in_window_release(releases, from_date, to_date),
