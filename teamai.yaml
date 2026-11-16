@@ -38,16 +38,6 @@ toolPaths:
     mcpProject: .codex/config.toml
     userScope:
       claudemd: .codex/AGENTS.md
-  opencode:
-    skills: .opencode/skills
-    rules: .opencode/rules
-    agents: .opencode/agents
-    mcp: .config/opencode/opencode.json
-    mcpProject: opencode.json
-    userScope:
-      skills: .config/opencode/skills
-      rules: .config/opencode/rules
-      agents: .config/opencode/agents
   workbuddy:
     skills: .workbuddy/skills
     rules: .codebuddy/rules
@@ -61,6 +51,18 @@ toolPaths:
   # 自定义端：Manus 从 ~/.manus/user-skills 读取用户投递的 SKILL.md
   manus:
     skills: .manus/user-skills
+  # Gemini CLI（teamai 端 id: agy）。skills 也可从 ~/.agents/skills 读，
+  # 但那里混着其他工具的副本，只投官方首选的 ~/.gemini/config/skills。
+  agy:
+    skills: .gemini/config/skills
+    rules: .gemini/config/rules
+    agents: .gemini/config/agents
+    mcp: .gemini/config/mcp_config.json
+  # DeepSeek Harness（teamai 端 id: dsh）。home 可被 DSH_HOME 重定位，本机未设。
+  dsh:
+    skills: .dsh/skills
+    claudemd: .dsh/AGENTS.md
+    mcp: .dsh/cordis.patch.yml
 sources:
   - name: gshappy365
     repo: https://github.com/gshappy365/skills
