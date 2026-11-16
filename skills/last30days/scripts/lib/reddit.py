@@ -26,7 +26,7 @@ def _first_of(*values, default=None):
             return v
     return default
 
-from . import dates, health, http, log
+from . import dates, health, http, log, snippet
 
 SCRAPECREATORS_BASE = "https://api.scrapecreators.com/v1/reddit"
 
@@ -621,16 +621,12 @@ def search_reddit(
         else:
             out_of_range += 1
 
-    if in_range:
-        all_items = in_range
-        if out_of_range:
-            _log(f"Filtered {out_of_range} posts outside date range")
-    else:
-        _log(f"No posts within date range, keeping all {len(all_items)}")
+    all_items = in_range
+    if out_of_range:
+        _log(f"Filtered {out_of_range} posts outside date range")
 
     # === Phase 6: Relevance floor + relevance-weighted ranking ===
-    # Drop the off-topic tail when enough on-topic posts remain (guard mirrors
-    # the date filter: keep all if too few clear the floor). When too few clear
+    # Drop the off-topic tail when enough on-topic posts remain. When too few clear
     # the soft floor, still strip zero-overlap posts (relevance exactly 0 = no
     # title/body token match at all, never on-topic) whenever anything relevant
     # remains, so viral high-upvote junk can't fill the section. Then rank by
@@ -738,13 +734,18 @@ def enrich_with_comments(
                 permalink = c.get("permalink", "")
                 comment_url = f"https://reddit.com{permalink}" if permalink else ""
 
-                max_excerpt = 400 if ci == 0 else 300
                 top_comments.append({
                     "score": score,
                     "date": _parse_date(c.get("created_utc")),
                     "author": author,
-                    "excerpt": body[:max_excerpt],
+                    "excerpt": snippet.cut_quote(body),
                     "url": comment_url,
+                    # The thread's own poster, when the payload says so.
+                    **(
+                        {"is_uploader": c["is_submitter"]}
+                        if isinstance(c.get("is_submitter"), bool)
+                        else {}
+                    ),
                 })
 
                 if len(body) >= 30 and author not in ("[deleted]", "[removed]", "AutoModerator"):

@@ -620,6 +620,10 @@ def get_config(policy: ConfigLoadPolicy | None = None) -> dict[str, Any]:
         ('LAST30DAYS_X_MODEL', None),
         ('LAST30DAYS_X_BACKEND', None),
         ('LAST30DAYS_REDDIT_BACKEND', None),
+        ('LAST30DAYS_YOUTUBE_BACKEND', None),
+        # Jobs lane: skip a job listing its site's robots.txt disallows.
+        # job_boards.robots reads os.environ, so .env values are exported below.
+        ('LAST30DAYS_JOBS_RESPECT_ROBOTS', None),
         # Keyless reddit.com token-bucket rate (req/sec). http.py reads it
         # from os.environ on each acquire, so .env values are exported below.
         ('LAST30DAYS_REDDIT_KEYLESS_RATE', None),
@@ -716,6 +720,16 @@ def get_config(policy: ConfigLoadPolicy | None = None) -> dict[str, Any]:
         ('LAST30DAYS_TRUSTPILOT_NO_BROWSER', None),
         ('FROM_BROWSER', None),
         ('BROWSER_CONSENT', None),
+        # Opt-in logged-in Reddit session (lib/reddit_session.py). Its own
+        # consent, separate from BROWSER_CONSENT (which can only veto it),
+        # and its own browser, recorded by `setup --reddit-session`.
+        (REDDIT_CONSENT_VAR, None),
+        (REDDIT_FROM_BROWSER_VAR, None),
+        (REDDIT_OFFERED_VAR, None),
+        (REDDIT_SESSION_SCHEDULED_VAR, None),
+        # Process env only (see the loop below): a .env line must not make
+        # every run look scheduled.
+        (SCHEDULED_RUN_VAR, None),
         ('LAST30DAYS_X_COOKIE_ACCESS_DENIED', None),
         # agentcookie sidecar: soft-dep X cookie source (lib/agentcookie.py),
         # active only on extra hosts (Linux / Mac mini / Darwin sink) or when
@@ -757,6 +771,7 @@ def get_config(policy: ConfigLoadPolicy | None = None) -> dict[str, Any]:
         # applied there when the key is absent. Empty disables.
         ('LAST30DAYS_YT_PLAYER_CLIENT', None),
         ('LAST30DAYS_YT_TRANSCRIPT_FAST_TIMEOUT', None),
+        ('LAST30DAYS_YT_TRANSCRIPT_FAST_ATTEMPTS', None),
         ('LAST30DAYS_YT_SEARCH_TIMEOUT', None),
         ('GITHUB_TOKEN', None),
         # Host self-identification. `grok-bot` switches the X policy
@@ -774,7 +789,7 @@ def get_config(policy: ConfigLoadPolicy | None = None) -> dict[str, Any]:
     ]
 
     for key, default in keys:
-        if key == X_HOST_LANE_VAR:
+        if key in (X_HOST_LANE_VAR, SCHEDULED_RUN_VAR):
             # Process env only; the .env value never reaches config.
             config[key] = os.environ.get(key) or default
             continue
@@ -802,9 +817,11 @@ def get_config(policy: ConfigLoadPolicy | None = None) -> dict[str, Any]:
     for key in (
         'LAST30DAYS_YT_SUB_LANGS',
         'LAST30DAYS_YT_TRANSCRIPT_FAST_TIMEOUT',
+        'LAST30DAYS_YT_TRANSCRIPT_FAST_ATTEMPTS',
         'LAST30DAYS_YT_SEARCH_TIMEOUT',
         'LAST30DAYS_REDDIT_KEYLESS_RATE',
         'LAST30DAYS_YT_PLAYER_CLIENT',
+        'LAST30DAYS_JOBS_RESPECT_ROBOTS',
     ):
         value = config.get(key)
         # Empty LAST30DAYS_YT_PLAYER_CLIENT is a valid disable; other knobs
@@ -1028,7 +1045,7 @@ def _discover_and_apply_x_credentials(config: dict[str, Any]) -> None:
     this returns before ANY leg, for every cookie domain, unless the pin is
     ``bird`` (the one path that re-enables discovery for that run).
     """
-    if not x_policy(config).cookie_discovery:
+    if not x_policy(config).cookie_discovery or cookie_access_denied(config):
         return
 
     from . import agentcookie, chrome_cdp
@@ -1077,18 +1094,161 @@ COOKIE_DOMAINS: dict[str, dict[str, Any]] = {
         "cookies": ["_session_id"],
         "mapping": {"_session_id": "TRUTHSOCIAL_TOKEN"},
     },
+    # The logged-in Reddit session. Its own consent gates it, and it is read
+    # from its own recorded browser, so the generic browser extract and the
+    # X-consent setup scan always skip it (``consent_key``); only
+    # read_reddit_session_cookie reads it, after reddit_session_gate passes.
+    "reddit": {
+        "domain": ".reddit.com",
+        "cookies": ["reddit_session"],
+        "mapping": {"reddit_session": "REDDIT_SESSION_COOKIE"},
+        "consent_key": "REDDIT_BROWSER_CONSENT",
+    },
 }
 
-COOKIE_BROWSER_NAMES = (
-    "firefox", "safari", "chrome", "brave", "edge", "vivaldi", "opera", "arc", "chromium"
+# --- Opt-in logged-in Reddit session ----------------------------------------
+#
+# Reading the reddit.com login cookie needs its own affirmative consent,
+# separate from the X browser consent: a user may want one without the other.
+# Every global refusal still vetoes it. The cookie lives only in process
+# memory; nothing persists it.
+REDDIT_CONSENT_VAR = "REDDIT_BROWSER_CONSENT"
+REDDIT_FROM_BROWSER_VAR = "REDDIT_FROM_BROWSER"
+# Written once the returning-user offer was made, whatever the answer.
+REDDIT_OFFERED_VAR = "REDDIT_SESSION_OFFERED"
+# In-memory key for the session cookie (never a .env key). The _COOKIE
+# suffix is what fixture recording redacts.
+REDDIT_SESSION_COOKIE_VAR = "REDDIT_SESSION_COOKIE"
+# Scheduled runs (cron, watchlist, briefing) export this; process env only.
+SCHEDULED_RUN_VAR = "LAST30DAYS_SCHEDULED_RUN"
+# Lets a scheduled run use the session anyway (its Keychain prompt cannot be
+# answered unattended, so this is off by default).
+REDDIT_SESSION_SCHEDULED_VAR = "LAST30DAYS_REDDIT_SESSION_SCHEDULED"
+REDDIT_COOKIE_DOMAIN = ".reddit.com"
+REDDIT_COOKIE_NAMES = ("reddit_session",)
+# Setup's scan order for the Reddit login: Chrome first, then the rest.
+REDDIT_SETUP_BROWSERS = (
+    "chrome", "brave", "edge", "vivaldi", "opera", "arc", "dia", "chromium", "firefox", "safari",
 )
+
+
+def hosted_backend_configured() -> bool:
+    """True when research would run through the remote API backend."""
+    return bool(read_secret_env("LAST30DAYS_API_KEY") and os.environ.get("LAST30DAYS_API_BASE"))
+
+
+def global_cookie_refusal(config: dict[str, Any], reddit_consent: bool = False) -> str:
+    """Why every browser-cookie read is refused this run, or "".
+
+    ``BROWSER_CONSENT=false``, ``FROM_BROWSER=off``, and a run that does not
+    read browser cookies at all (``--no-browser-cookies``, the MCP default,
+    and the plan-only ``--diagnose``/``--preflight``/``doctor`` modes).
+
+    ``reddit_consent`` marks an explicit yes to the Reddit session question.
+    That yes is its own consent, so a ``BROWSER_CONSENT=false`` saved when the
+    user skipped X does not block it. ``FROM_BROWSER=off`` still does.
+    """
+    if str(config.get("FROM_BROWSER") or "").strip().lower() == "off":
+        return "FROM_BROWSER=off"
+    if not reddit_consent and cookie_access_denied(config):
+        return "BROWSER_CONSENT refuses browser reads"
+    mode = config.get("_BROWSER_COOKIE_MODE") or "off"
+    if mode == "plan_only":
+        return "this mode reads no browser cookies"
+    if mode != "read":
+        return "browser cookies are off for this run"
+    return ""
+
+
+def reddit_session_gate(config: dict[str, Any]) -> tuple[bool, str]:
+    """Whether this run may read the Reddit login cookie: ``(allowed, why_not)``.
+
+    Pure: reads config and the process environment only, never a cookie. The
+    order is the global veto, then the contexts that never use the session,
+    then the Reddit consent itself, then a recorded browser.
+    """
+    refusal = global_cookie_refusal(config, reddit_consent=_truthy(config.get(REDDIT_CONSENT_VAR)))
+    if refusal:
+        return False, refusal
+    if str(config.get(X_HOST_VAR) or os.environ.get(X_HOST_VAR) or "").strip().lower() == GROK_BOT_HOST:
+        return False, "never on a Grok Bot host"
+    if hosted_backend_configured():
+        return False, "the hosted API backend runs research remotely"
+    if _truthy(os.environ.get(SCHEDULED_RUN_VAR)) and not _truthy(
+        config.get(REDDIT_SESSION_SCHEDULED_VAR) or os.environ.get(REDDIT_SESSION_SCHEDULED_VAR)
+    ):
+        return False, "scheduled run (set LAST30DAYS_REDDIT_SESSION_SCHEDULED=1 to allow)"
+    if not _truthy(config.get(REDDIT_CONSENT_VAR)):
+        return False, "no Reddit session consent"
+    browser = str(config.get(REDDIT_FROM_BROWSER_VAR) or "").strip().lower()
+    if browser not in COOKIE_BROWSER_NAMES:
+        return False, "no browser recorded for the Reddit login (run setup --reddit-session)"
+    return True, ""
+
+
+def reddit_consent_state(config: dict[str, Any]) -> str:
+    """``granted``, ``refused``, or ``unset`` (doctor and setup; no read)."""
+    raw = config.get(REDDIT_CONSENT_VAR)
+    if raw is None or str(raw).strip() == "":
+        return "unset"
+    return "granted" if _truthy(raw) else "refused"
+
+
+def read_reddit_session_cookie(
+    config: dict[str, Any], browser: str | None = None,
+) -> tuple[str | None, str]:
+    """The ``reddit_session`` cookie from one browser: ``(value, status)``.
+
+    Reads only the recorded ``REDDIT_FROM_BROWSER`` (or ``browser``), never
+    ``FROM_BROWSER``. ``status`` is ``ok``, ``not-logged-in``,
+    ``permission-denied``, ``unsupported-encryption`` (a Windows app-bound
+    store) or ``error``. Never logs the value. Callers check
+    :func:`reddit_session_gate` first.
+    """
+    name = str(browser or config.get(REDDIT_FROM_BROWSER_VAR) or "").strip().lower()
+    if name not in COOKIE_BROWSER_NAMES:
+        return None, "error"
+    if os.name == "nt" and name != "firefox":
+        return None, "unsupported-encryption"
+    try:
+        from . import cookie_extract
+        cookies = cookie_extract.extract_cookies(name, REDDIT_COOKIE_DOMAIN, list(REDDIT_COOKIE_NAMES))
+    except PermissionError:
+        return None, "permission-denied"
+    except Exception:
+        return None, "error"
+    value = (cookies or {}).get("reddit_session")
+    if not value:
+        return None, "not-logged-in"
+    from . import http as _http
+    _http.add_fixture_redactions([value])
+    return value, "ok"
+
+COOKIE_BROWSER_NAMES = (
+    "firefox", "safari", "chrome", "brave", "edge", "vivaldi", "opera", "arc", "dia", "chromium"
+)
+
+
+def cookie_access_denied(config: dict[str, Any]) -> bool:
+    """An explicit refusal blocks native, CDP, and sidecar cookie discovery.
+
+    Missing consent keeps each source's existing opt-in/default policy.
+    A present but unrecognized consent value fails closed, as native reads do.
+    This does not disable credentials supplied directly by the user.
+    """
+    if str(config.get("FROM_BROWSER") or "").strip().lower() == "off":
+        return True
+    consent = config.get("BROWSER_CONSENT")
+    return consent is not None and str(consent).strip().lower() not in {
+        "1", "true", "yes", "on",
+    }
 
 
 def cookie_extraction_browsers(config: dict[str, Any]) -> list[str]:
     """Browsers to try for cookie extraction, honoring FROM_BROWSER.
 
     Default (FROM_BROWSER unset): no browser-cookie reads. The Chromium family
-    (Chrome, Brave, Edge, Vivaldi, Opera, Arc, Chromium) is available only when
+    (Chrome, Brave, Edge, Vivaldi, Opera, Arc, Dia, Chromium) is available only when
     explicitly selected because reading their cookies on macOS requires the
     browser's Safe Storage Keychain key, which triggers a system password prompt
     that cannot be reliably suppressed. On Windows only Firefox cookie
@@ -1107,10 +1267,7 @@ def cookie_extraction_browsers(config: dict[str, Any]) -> list[str]:
     unrequested Keychain prompt. On an official-only host (``x_policy``) the
     list is empty regardless of ``FROM_BROWSER`` unless ``bird`` is pinned.
     """
-    if not x_policy(config).cookie_discovery:
-        return []
-    consent = config.get("BROWSER_CONSENT")
-    if consent is not None and str(consent).strip().lower() not in {"1", "true", "yes", "on"}:
+    if not x_policy(config).cookie_discovery or cookie_access_denied(config):
         return []
     silent_browsers = list(COOKIE_BROWSER_NAMES[:2])
     chromium_browsers = list(COOKIE_BROWSER_NAMES[2:])
@@ -1164,6 +1321,9 @@ def extract_browser_credentials(config: dict[str, Any]) -> dict[str, str]:
         return {}
     extracted: dict[str, str] = {}
     for _service, spec in COOKIE_DOMAINS.items():
+        if spec.get("consent_key"):
+            # Its own gate and its own browser (read_reddit_session_cookie).
+            continue
         missing_cookies = [
             name for name in spec["cookies"] if not config.get(spec["mapping"][name])
         ]
@@ -1173,9 +1333,10 @@ def extract_browser_credentials(config: dict[str, Any]) -> dict[str, str]:
         # so values are never combined across browsers: a complete set from
         # one browser wins, else the first browser's partial set is kept.
         chosen: dict[str, str] | None = None
+        chosen_index: int | None = None
         fallback: dict[str, str] | None = None
         denied_browsers: list[str] = []
-        for browser in browsers:
+        for index, browser in enumerate(browsers):
             try:
                 cookies = cookie_extract.extract_cookies(browser, spec["domain"], spec["cookies"])
             except PermissionError:
@@ -1195,6 +1356,7 @@ def extract_browser_credentials(config: dict[str, Any]) -> dict[str, str]:
                 continue
             if cookie_extract.has_complete_pair(cookies, spec["cookies"]):
                 chosen = cookies
+                chosen_index = index
                 break
             if fallback is None:
                 fallback = cookies
@@ -1207,10 +1369,144 @@ def extract_browser_credentials(config: dict[str, Any]) -> dict[str, str]:
                 "[last30days] X browser cookie access permission denied in "
                 f"{', '.join(denied_browsers)}. {X_COOKIE_ACCESS_FIX}\n"
             )
+        if (
+            _service == "x"
+            and chosen_index is not None
+            and len(missing_cookies) == len(spec["cookies"])
+        ):
+            # Remember where the X session came from and which browsers are
+            # left, so bird can move to the next browser's session if X
+            # rejects this one (an expired session in an earlier browser
+            # would otherwise shadow a live one in a later browser).
+            config[X_SESSION_STATE_KEY] = {
+                "browser": browsers[chosen_index],
+                "remaining": list(browsers[chosen_index + 1:]),
+                "rejected": set(),
+                "auth_token": chosen.get("auth_token"),
+                "ct0": chosen.get("ct0"),
+            }
         for cookie_name, env_key in spec["mapping"].items():
             if chosen.get(cookie_name) and not config.get(env_key):
                 extracted[env_key] = chosen[cookie_name]
     return extracted
+
+
+# In-memory X browser-session failover state (never persisted). One mutable
+# dict per run: ``pipeline.run`` and its phases work on shallow config copies,
+# so keeping the live session here (not in AUTH_TOKEN/CT0) lets every copy see
+# a switch made by any other.
+X_SESSION_STATE_KEY = "_X_SESSION_STATE"
+
+
+def x_session_state(config: dict[str, Any]) -> dict[str, Any] | None:
+    """The run's browser-session failover state, or None when not browser-sourced."""
+    state = config.get(X_SESSION_STATE_KEY)
+    if not isinstance(state, dict) or config.get("_AUTH_TOKEN_SOURCE") != "browser":
+        return None
+    return state
+
+
+def next_x_browser_pair(
+    config: dict[str, Any],
+    deadline: float | None = None,
+    cancel: Any = None,
+) -> tuple[str, str, str] | None:
+    """Extract the next browser's complete X session after a rejection.
+
+    Marks the current session rejected, then walks the browsers left after
+    the one that supplied it, in ``extract_browser_credentials`` order, and
+    returns ``(auth_token, ct0, browser)`` for the first complete pair whose
+    session has not been rejected this run. Stops early when ``deadline``
+    (``time.monotonic()``) is under two seconds away or ``cancel`` is set,
+    leaving unread browsers for a later search. Lazy on purpose: a later
+    Chromium browser may cost a Keychain prompt, so it is read only after an
+    earlier browser's session failed.
+    """
+    state = x_session_state(config)
+    if state is None:
+        return None
+    if state.get("auth_token"):
+        state["rejected"].add(state["auth_token"])
+    remaining = state["remaining"]
+    if not remaining:
+        return None
+    try:
+        from . import cookie_extract
+    except ImportError:
+        return None
+    import time as _time
+    spec = COOKIE_DOMAINS["x"]
+    while remaining:
+        if cancel is not None and cancel.is_set():
+            return None
+        if deadline is not None and deadline - _time.monotonic() < 2:
+            return None
+        browser = remaining.pop(0)
+        budget = None if deadline is None else deadline - _time.monotonic() - 1
+        cookies = _bounded_cookie_read(cookie_extract, browser, spec, budget)
+        if cookies is _READ_TIMED_OUT:
+            # A Keychain lookup is still waiting; leave the rest for later
+            # rather than overrunning this search's budget.
+            return None
+        if not cookie_extract.has_complete_pair(cookies, spec["cookies"]):
+            continue
+        if cookies["auth_token"] in state["rejected"]:
+            # A session already rejected this run (e.g. a shared profile).
+            continue
+        state.update(browser=browser, auth_token=cookies["auth_token"], ct0=cookies["ct0"])
+        _apply_x_pair(config, cookies["auth_token"], cookies["ct0"], "browser")
+        return cookies["auth_token"], cookies["ct0"], browser
+    return None
+
+
+_READ_TIMED_OUT = object()
+
+
+def _bounded_cookie_read(cookie_extract: Any, browser: str, spec: dict[str, Any], budget: float | None) -> Any:
+    """Read one browser's X cookies, waiting at most ``budget`` seconds.
+
+    A Chromium read can block on a Keychain lookup (up to its own 10s
+    timeout). With a budget the read runs on a daemon thread, and an unfinished
+    read returns ``_READ_TIMED_OUT`` so the caller is never held past its
+    deadline; the abandoned read finishes or times out on its own.
+    """
+    def read() -> Any:
+        try:
+            return cookie_extract.extract_cookies(browser, spec["domain"], spec["cookies"])
+        except Exception:
+            return None
+
+    if budget is None:
+        return read()
+    if budget <= 0:
+        return _READ_TIMED_OUT
+    import threading
+    result: list[Any] = []
+    worker = threading.Thread(target=lambda: result.append(read()), daemon=True)
+    worker.start()
+    worker.join(budget)
+    if worker.is_alive():
+        return _READ_TIMED_OUT
+    return result[0] if result else None
+
+
+def _inject_bird_credentials(config: dict[str, Any]) -> None:
+    """Hand the X session (and its browser failover) to the bird client.
+
+    For a browser-sourced session the shared run state wins over this
+    config's AUTH_TOKEN/CT0, so a config copy made before a failover never
+    re-injects the session X already rejected.
+    """
+    from . import bird_x
+    state = x_session_state(config)
+    if state is not None and state.get("auth_token") and state.get("ct0"):
+        bird_x.set_credentials(state["auth_token"], state["ct0"])
+        bird_x.set_session_failover(
+            state.get("browser"),
+            lambda deadline=None, cancel=None: next_x_browser_pair(config, deadline, cancel),
+        )
+        return
+    bird_x.set_credentials(config.get('AUTH_TOKEN'), config.get('CT0'))
 
 
 # Auth-origin label per X backend for ``get_x_source_with_method`` (bird's
@@ -1348,6 +1644,39 @@ def engine_plan_allowed(environ: Any = None) -> bool:
     source = os.environ if environ is None else environ
     return _truthy(source.get(ALLOW_ENGINE_PLAN_VAR))
 
+
+# A caller whose reader never sees the skill's instruction files (the MCP
+# `research` tool) asks for output with no Jobs Digest section.
+NO_JOBS_DIGEST_VAR = 'LAST30DAYS_NO_JOBS_DIGEST'
+
+
+def jobs_digest_disabled(environ: Any = None) -> bool:
+    """True when ``LAST30DAYS_NO_JOBS_DIGEST`` asks for a run with no jobs digest."""
+    source = os.environ if environ is None else environ
+    return _truthy(source.get(NO_JOBS_DIGEST_VAR))
+
+
+# The same kind of caller asks for a run that does not search a company's
+# patent filings at all: the fetch is skipped, not just its section.
+NO_PATENT_DIGEST_VAR = 'LAST30DAYS_NO_PATENT_DIGEST'
+
+
+def patent_digest_disabled(environ: Any = None) -> bool:
+    """True when ``LAST30DAYS_NO_PATENT_DIGEST`` asks for a run with no patent digest."""
+    source = os.environ if environ is None else environ
+    return _truthy(source.get(NO_PATENT_DIGEST_VAR))
+
+
+# The same kind of caller asks for compact stdout that ends at the canonical
+# boundary, with no report-format checklist after it.
+NO_REPORT_CHECKLIST_VAR = 'LAST30DAYS_NO_REPORT_CHECKLIST'
+
+
+def report_checklist_disabled(environ: Any = None) -> bool:
+    """True when ``LAST30DAYS_NO_REPORT_CHECKLIST`` asks for no checklist."""
+    source = os.environ if environ is None else environ
+    return _truthy(source.get(NO_REPORT_CHECKLIST_VAR))
+
 # Public routing definitions for the doctor/backend-descriptor layer
 # (lib/backends.py). These are aliases for knowledge this module already
 # owns — the declared X chain order and the pin/floor env var names — so
@@ -1358,6 +1687,10 @@ X_BACKEND_KNOWN = _X_BACKEND_KNOWN
 X_OFFICIAL = _X_OFFICIAL
 X_BACKEND_PIN_VAR = 'LAST30DAYS_X_BACKEND'
 REDDIT_BACKEND_PIN_VAR = 'LAST30DAYS_REDDIT_BACKEND'
+# `yt-dlp` keeps YouTube off ScrapeCreators while the key still serves other
+# sources (#1316). It is the only pin value; anything else means auto.
+YOUTUBE_BACKEND_PIN_VAR = 'LAST30DAYS_YOUTUBE_BACKEND'
+YOUTUBE_BACKEND_PIN_VALUES = ('yt-dlp',)
 REDDIT_SC_MIN_ITEMS_VAR = 'LAST30DAYS_REDDIT_SC_MIN_ITEMS'
 # Keyed runs backfill Reddit from ScrapeCreators when the free path returns
 # fewer than this many items. Thin topics yield 2-3 free results; healthy
@@ -1538,8 +1871,7 @@ def x_backend_chain(config: dict[str, Any], local_only: bool = False) -> list[st
         ]
 
     if 'bird' in chain:
-        from . import bird_x
-        bird_x.set_credentials(config.get('AUTH_TOKEN'), config.get('CT0'))
+        _inject_bird_credentials(config)
     return chain
 
 
@@ -1565,10 +1897,11 @@ def x_pending_browser_auth(config: dict[str, Any], local_only: bool = False) -> 
     "available pending browser auth" state without reading a single cookie — it
     keys only on the resolved browser list (``cookie_extraction_browsers``
     derives it from ``FROM_BROWSER`` alone, no secrets) OR — on extra hosts
-    only (``x_extras_enabled``) — the agentcookie sidecar being on PATH (a plain
-    ``which`` lookup), bird being installed, and X having a cookie-domain
-    mapping. A plain MacBook must NOT predict bird from an agentcookie binary on
-    PATH (R18), so the sidecar leg is gated behind ``x_extras_enabled``.
+    only (``x_extras_enabled``) — the agentcookie sidecar having explicit consent
+    and being on PATH (a plain ``which`` lookup), bird being installed, and X
+    having a cookie-domain mapping. A plain MacBook must NOT predict bird from
+    an agentcookie binary on PATH (R18), so the sidecar leg is gated behind
+    ``x_extras_enabled``.
     Side-effect free, so the safe-inspection contract of diagnose/preflight is
     preserved.
 
@@ -1600,10 +1933,11 @@ def x_pending_browser_auth(config: dict[str, Any], local_only: bool = False) -> 
     # The agentcookie sidecar is a run-time cookie source ONLY on extra hosts
     # (Linux / Mac mini / Darwin sink / AGENTCOOKIE=on). Gating this keeps a
     # plain MacBook from predicting bird off a stray agentcookie binary (R18).
-    if x_extras_enabled(config):
-        from . import agentcookie
-        if agentcookie.is_available(config):
-            return True
+    # Admission precedes host classification so a refused sidecar never reads
+    # its role file or probes the hardware model merely to predict availability.
+    from . import agentcookie
+    if agentcookie.is_available(config) and x_extras_enabled(config):
+        return True
     return False
 
 
@@ -1630,7 +1964,7 @@ def is_youtube_comments_available(config: dict[str, Any]) -> bool:
         return False
     if is_ytdlp_available():
         return True
-    if not config.get('SCRAPECREATORS_API_KEY'):
+    if not is_youtube_sc_available(config):
         return False
     return 'youtube_comments' in _parse_include_sources(config)
 
@@ -1661,11 +1995,23 @@ def is_instagram_comments_available(config: dict[str, Any]) -> bool:
     return 'instagram_comments' in _parse_include_sources(config)
 
 
-def is_youtube_sc_available(config: dict[str, Any]) -> bool:
-    """Check if ScrapeCreators YouTube search fallback is available.
+def youtube_backend_pin(config: dict[str, Any]) -> str:
+    """The normalized ``LAST30DAYS_YOUTUBE_BACKEND`` pin ("" when unset or unknown)."""
+    raw = (config.get(YOUTUBE_BACKEND_PIN_VAR) or '').strip().lower()
+    if raw == 'ytdlp':
+        raw = 'yt-dlp'
+    return raw if raw in YOUTUBE_BACKEND_PIN_VALUES else ''
 
-    Used when yt-dlp is not installed or fails.
+
+def is_youtube_sc_available(config: dict[str, Any]) -> bool:
+    """Check if the YouTube lane may spend ScrapeCreators credits.
+
+    Gates the SC search fallback, the per-video transcript rescue, and SC
+    comments. False without a key, or when ``LAST30DAYS_YOUTUBE_BACKEND=yt-dlp``
+    keeps YouTube keyless while the key still serves other sources.
     """
+    if youtube_backend_pin(config) == 'yt-dlp':
+        return False
     return bool(config.get('SCRAPECREATORS_API_KEY'))
 
 
@@ -1764,6 +2110,11 @@ def _parse_exclude_sources(config: dict[str, Any]) -> set[str]:
     """Parse EXCLUDE_SOURCES config value into a set of lowercase source names."""
     raw = config.get('EXCLUDE_SOURCES') or ''
     return {s.strip().lower() for s in raw.split(',') if s.strip()}
+
+
+def exclude_sources(config: dict[str, Any]) -> set[str]:
+    """Public view of the parsed EXCLUDE_SOURCES set."""
+    return _parse_exclude_sources(config)
 
 
 def include_sources(config: dict[str, Any]) -> set[str]:
@@ -1915,7 +2266,7 @@ def get_x_source_status(config: dict[str, Any], probe: bool = False) -> dict[str
         considered.add(pin)
 
     if 'bird' in considered and config.get('AUTH_TOKEN') and config.get('CT0'):
-        bird_x.set_credentials(config.get('AUTH_TOKEN'), config.get('CT0'))
+        _inject_bird_credentials(config)
     bird_status = dict(bird_x.get_bird_status())
     if 'bird' not in considered:
         # Never report the scraper as usable where the policy forbids it.

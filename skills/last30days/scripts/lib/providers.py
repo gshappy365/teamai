@@ -15,7 +15,7 @@ from . import env, http, schema
 GEMINI_FLASH_LITE = "gemini-3.1-flash-lite"
 GEMINI_PRO = "gemini-3.1-pro-preview"
 OPENAI_DEFAULT = "gpt-5.4-nano"
-XAI_DEFAULT = "grok-4-1-fast"
+XAI_DEFAULT = "grok-4.20-0309-non-reasoning"
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
@@ -429,8 +429,12 @@ def _resolve_model_pins(config: dict[str, Any], depth: str, provider_name: str) 
     rerank_model = config.get("LAST30DAYS_RERANK_MODEL") or default_rerank
 
     if provider_name == "gemini":
-        _require_gemini_31(planner_model, role="planner")
-        _require_gemini_31(rerank_model, role="rerank")
+        if not _is_gemini_31_or_newer(planner_model):
+            _warn_stale_gemini_pin(planner_model, default_planner, role="planner")
+            planner_model = default_planner
+        if not _is_gemini_31_or_newer(rerank_model):
+            _warn_stale_gemini_pin(rerank_model, default_rerank, role="rerank")
+            rerank_model = default_rerank
 
     return planner_model, rerank_model
 
@@ -542,11 +546,17 @@ def _resolve_x_backend(config: dict[str, Any]) -> str | None:
     return env.get_x_source(config)
 
 
-def _require_gemini_31(model: str, *, role: str) -> None:
-    if model.startswith("gemini-3.1-"):
-        return
-    raise RuntimeError(
-        f"{role} must use a Gemini 3.1 model. Got: {model}"
+def _is_gemini_31_or_newer(model: str) -> bool:
+    match = re.match(r"gemini-(\d+)(?:\.(\d+))?(?:-|$)", model)
+    if not match:
+        return False
+    return (int(match.group(1)), int(match.group(2) or 0)) >= (3, 1)
+
+
+def _warn_stale_gemini_pin(model: str, default: str, *, role: str) -> None:
+    print(
+        f"[Providers] {role} model {model!r} is not Gemini 3.1 or newer; using {default}.",
+        file=sys.stderr,
     )
 
 

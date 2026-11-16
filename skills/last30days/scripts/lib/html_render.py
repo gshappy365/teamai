@@ -17,9 +17,26 @@ PROSE_LABELS = [
     ("KEY PATTERNS from the research:", "Key patterns from the research"),
 ]
 
-INVITATION_PATTERN = re.compile(r"^---\nI'm now an expert.*?Just ask\.$", re.MULTILINE | re.DOTALL)
+# The invitation closes a report, so it runs to the end of the text. Reports
+# saved before the closing "Just ask." line was dropped stop at that line.
+INVITATION_PATTERN = re.compile(
+    r"^(?:---\nI'm now an expert|I've compared ).*?(?:Just ask\.$|\Z)",
+    re.MULTILINE | re.DOTALL,
+)
 EVIDENCE_BLOCK_PATTERN = re.compile(r"<!-- EVIDENCE FOR SYNTHESIS.*?<!-- END EVIDENCE FOR SYNTHESIS -->", re.DOTALL)
 PASS_THROUGH_FOOTER_PATTERN = re.compile(r"<!-- PASS-THROUGH FOOTER.*?-->\n(.*?)<!-- END PASS-THROUGH FOOTER -->", re.DOTALL)
+# Line-by-line on purpose: no row inside the match may itself open or close a
+# fence, so an earlier ordinary ```text block cannot be stitched to the real
+# footer with the prose between them swallowed into the footer box.
+_FOOTER_ROWS = r"(?:(?!```)[^\n]*\n)*?"
+FENCED_ENGINE_FOOTER_PATTERN = re.compile(
+    r"^```text\n(---\n"
+    + _FOOTER_ROWS
+    + r"[^\n]*All agents reported back![^\n]*\n"
+    + _FOOTER_ROWS
+    + r"---)\n```$",
+    re.MULTILINE,
+)
 CANONICAL_BOUNDARY_PATTERN = re.compile(r"\n?---\n# END OF last30days CANONICAL OUTPUT.*$", re.DOTALL)
 # render_for_html emits metadata as <!-- META: ... --> so it survives the
 # markdown converter (which escapes raw HTML inside paragraphs). Promoted to
@@ -396,13 +413,12 @@ def render_html(
 ) -> str:
     md = render.render_for_html(
         report,
-        synthesis_md=synthesis_md,
+        synthesis_md=_strip_synthesis_invitation(synthesis_md),
         save_path=save_path,
         fun_level=fun_level,
         register=register,
     )
     md = _strip_evidence_block(md)
-    md = _strip_invitation(md)
     md = _strip_canonical_boundary(md)
     md = _promote_prose_labels(md)
     body = _markdown_to_html(md)
@@ -421,10 +437,11 @@ def render_html_comparison(
 ) -> str:
     _ = fun_level
     md = render.render_for_html_comparison(
-        entity_reports, synthesis_md=synthesis_md, save_path=save_path,
+        entity_reports,
+        synthesis_md=_strip_synthesis_invitation(synthesis_md),
+        save_path=save_path,
     )
     md = _strip_evidence_block(md)
-    md = _strip_invitation(md)
     md = _strip_canonical_boundary(md)
     md = _promote_prose_labels(md)
     body = _markdown_to_html(md)
@@ -557,6 +574,13 @@ def _strip_invitation(md: str) -> str:
     return INVITATION_PATTERN.sub("", md)
 
 
+def _strip_synthesis_invitation(synthesis_md: str | None) -> str | None:
+    """Strip the invitation before the engine footer is appended after it."""
+    if synthesis_md is None:
+        return None
+    return _strip_invitation(synthesis_md)
+
+
 def _strip_canonical_boundary(md: str) -> str:
     return CANONICAL_BOUNDARY_PATTERN.sub("", md)
 
@@ -673,8 +697,10 @@ def _markdown_to_html(md: str) -> str:
             out.append(f"<blockquote>{_inline_markdown(' '.join(quote_lines))}</blockquote>")
             continue
 
-        unordered = re.match(r"^[-*]\s+(.+)$", stripped)
-        ordered = re.match(r"^\d+[.)]\s+(.+)$", stripped)
+        # `•` and an escaped `1\.` are the list-free markers the skill writes
+        # in chat on Claude Code; an export copies that text and wants lists.
+        unordered = re.match(r"^[-*•]\s+(.+)$", stripped)
+        ordered = re.match(r"^\d+(?:[.)]|\\\.)\s+(.+)$", stripped)
         if unordered or ordered:
             flush_paragraph()
             next_type = "ul" if unordered else "ol"
@@ -713,7 +739,9 @@ def _protect_engine_footers(md: str) -> tuple[str, dict[str, str]]:
         footers[token] = match.group(1).strip("\n")
         return f"\n{token}\n"
 
-    return PASS_THROUGH_FOOTER_PATTERN.sub(replace, md), footers
+    md = PASS_THROUGH_FOOTER_PATTERN.sub(replace, md)
+    md = FENCED_ENGINE_FOOTER_PATTERN.sub(replace, md)
+    return md, footers
 
 
 def _wrap_engine_footer(body: str) -> str:
