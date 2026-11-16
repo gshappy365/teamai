@@ -66,3 +66,5 @@ sources:
     repo: https://github.com/gshappy365/skills
   - name: pstack
     repo: gshappy365/pstack
+  - name: wigolo
+    repo: https://github.com/gshappy365/wigolo
