@@ -19,6 +19,48 @@ sharing:
     enabled: true
     endpoints: [] # 待配置：type: json|feishu|wecom, url, events(如 ["*"]), secret(可选)
 usageReport: false
+# 注意：toolPaths 一旦出现就整体替换 CLI 内置默认表，不会与默认值合并。
+# 因此这里必须写全需要保留的端（内容对齐 teamai-cli 0.27.0 默认值）。
+toolPaths:
+  claude:
+    skills: .claude/skills
+    rules: .claude/rules
+    settings: .claude/settings.json
+    claudemd: .claude/CLAUDE.md
+    agents: .claude/agents
+    mcp: .claude.json
+    mcpProject: .mcp.json
+  codex:
+    skills: .codex/skills
+    settings: .codex/hooks.json
+    agents: .codex/agents
+    mcp: .codex/config.toml
+    mcpProject: .codex/config.toml
+    userScope:
+      claudemd: .codex/AGENTS.md
+  opencode:
+    skills: .opencode/skills
+    rules: .opencode/rules
+    agents: .opencode/agents
+    mcp: .config/opencode/opencode.json
+    mcpProject: opencode.json
+    userScope:
+      skills: .config/opencode/skills
+      rules: .config/opencode/rules
+      agents: .config/opencode/agents
+  workbuddy:
+    skills: .workbuddy/skills
+    rules: .codebuddy/rules
+    settings: .workbuddy/settings.json
+    claudemd: AGENTS.md
+    agents: .workbuddy/agents
+    mcp: .workbuddy/mcp.json
+    mcpProject: .workbuddy/mcp.json
+    userScope:
+      rules: .workbuddy/rules
+  # 自定义端：Manus 从 ~/.manus/user-skills 读取用户投递的 SKILL.md
+  manus:
+    skills: .manus/user-skills
 sources:
   - name: gshappy365
     repo: https://github.com/gshappy365/skills
