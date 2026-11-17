@@ -24,10 +24,10 @@ votes:
     upvoted_count: 0
     last_recalled_at: 2026-11-12T07:35:04.339Z
   first-tree-与-teamai-的分层协同及-context-tree-seed-修复-2026-09-27-2w6ccn:
-    recalled_count: 7
+    recalled_count: 8
     upvoted_count: 0
-    last_recalled_at: 2026-11-16T07:02:35.807Z
-    recalled_session_count: 7
+    last_recalled_at: 2026-11-17T07:44:18.495Z
+    recalled_session_count: 8
   本地托管-context-tree-搭建与使用指南-2026-09-19-ylq7o2:
     recalled_count: 6
     upvoted_count: 0
@@ -38,15 +38,15 @@ votes:
     last_recalled_at: 2026-11-16T06:12:56.371Z
     recalled_session_count: 2
   git-push-网络容错:
-    recalled_count: 2
+    recalled_count: 3
     upvoted_count: 0
-    last_recalled_at: 2026-11-16T07:02:35.807Z
-    recalled_session_count: 2
+    last_recalled_at: 2026-11-17T07:44:18.495Z
+    recalled_session_count: 3
   teamai-contribute工作流:
-    recalled_count: 4
+    recalled_count: 5
     upvoted_count: 0
-    last_recalled_at: 2026-11-16T07:02:35.807Z
-    recalled_session_count: 5
+    last_recalled_at: 2026-11-17T07:44:18.495Z
+    recalled_session_count: 6
   定位-teamai-内置技能并核对经验贡献分支-2026-09-27-q3vljx:
     recalled_count: 4
     upvoted_count: 0
@@ -65,9 +65,10 @@ votes:
     upvoted_count: 0
     last_recalled_at: 2026-09-27T06:39:18.350Z
   first-tree-与三仓库协作的变更路由-2026-09-27-bof5fz:
-    recalled_count: 3
+    recalled_count: 4
     upvoted_count: 0
-    last_recalled_at: 2026-10-10T07:46:31.229Z
+    last_recalled_at: 2026-11-17T07:44:18.495Z
+    recalled_session_count: 4
   session-notes-2026-10-10-7bffcp:
     recalled_count: 5
     upvoted_count: 0
@@ -78,15 +79,16 @@ votes:
     upvoted_count: 0
     last_recalled_at: 2026-11-01T10:07:44.530Z
   agents/issue-tracker:
-    recalled_count: 1
+    recalled_count: 2
     upvoted_count: 0
-    last_recalled_at: 2026-11-01T10:07:44.530Z
+    last_recalled_at: 2026-11-17T07:44:26.580Z
+    recalled_session_count: 2
   wigolo-mcp-map:
-    recalled_count: 5
+    recalled_count: 6
     upvoted_count: 1
-    last_recalled_at: 2026-11-16T07:02:37.833Z
+    last_recalled_at: 2026-11-17T07:44:26.580Z
     last_upvoted_at: 2026-11-16T06:13:42.709Z
-    recalled_session_count: 6
+    recalled_session_count: 7
   setup-matt-pocock-skills:
     recalled_count: 1
     upvoted_count: 0
@@ -100,10 +102,10 @@ votes:
     upvoted_count: 0
     last_recalled_at: 2026-11-03T08:15:35.279Z
   adr/0001-迁移到-teamai-cli-user-scope:
-    recalled_count: 4
+    recalled_count: 6
     upvoted_count: 0
-    last_recalled_at: 2026-11-16T07:02:37.833Z
-    recalled_session_count: 3
+    last_recalled_at: 2026-11-17T07:44:26.580Z
+    recalled_session_count: 4
   show-me:
     recalled_count: 1
     upvoted_count: 0
@@ -135,6 +137,16 @@ votes:
     upvoted_count: 0
     last_recalled_at: 2026-11-16T07:02:37.833Z
     recalled_session_count: 1
+  chatcut-竖版解说短视频制作流水线-pstack-系列-2026-10-06-w022e9:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-11-17T07:44:26.580Z
+    recalled_session_count: 1
+  agents/domain:
+    recalled_count: 1
+    upvoted_count: 0
+    last_recalled_at: 2026-11-17T07:44:26.580Z
+    recalled_session_count: 1
 deltas: {}
 deliveredSyncIds:
   - c05c86ae-3b06-4263-8090-a00dd7366476
@@ -145,3 +157,4 @@ deliveredSyncIds:
   - a1b24d2b-d968-42ec-ad47-c3d112c2d6ac
   - 941a5af8-5109-46e8-8734-c001ac06e972
   - f5f8aa41-ae60-43e5-ac76-625133e1ffb7
+  - 83035809-b437-4b15-b8f9-417cd10768f8
