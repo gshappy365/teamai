@@ -19,8 +19,9 @@ sharing:
     enabled: true
     endpoints: [] # 待配置：type: json|feishu|wecom, url, events(如 ["*"]), secret(可选)
 usageReport: false
-# 注意：toolPaths 一旦出现就整体替换 CLI 内置默认表，不会与默认值合并。
-# 因此这里必须写全需要保留的端（内容对齐 teamai-cli 0.27.0 默认值）。
+# 说明：teamai-cli v0.30+ 中 toolPaths 按工具名与 CLI 内置默认表合并（每个声明的工具整体覆盖自身默认值，
+# 未声明的内置工具仍沿用默认路径）。因此无法通过从此处删去条目来禁用 zcode/hermes/opencode/cursor 等内置端；
+# 需在各机器通过 `teamai uninstall --agent <name>`（写入 ~/.teamai/config.yaml 的 disabledAgents）或 `teamai init --agent ...` 控制。
 toolPaths:
   claude:
     skills: .claude/skills
