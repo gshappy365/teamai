@@ -58,7 +58,10 @@ toolPaths:
     skills: .gemini/config/skills
     rules: .gemini/config/rules
     agents: .gemini/config/agents
+    # mcp 是用户级文件；agy 只从插件读项目的 MCP，所以 mcpProject 指向 teamai 自己的插件。
+    # 这两个键要一起写，缺 mcpProject 会丢掉 CLI 内置默认值（doctor 会提示）。
     mcp: .gemini/config/mcp_config.json
+    mcpProject: .agents/plugins/teamai/mcp_config.json
   # DeepSeek Harness（teamai 端 id: dsh）。home 可被 DSH_HOME 重定位，本机未设。
   dsh:
     skills: .dsh/skills
